@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mera Ai - Ludo Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* [1] CSS Variables & Global Styles */
+        :root{
+            --bg:#000000;
+            --panel:#0a0a0a;
+            --fg:#f8f8f8;
+            --muted:#b0b0b0;
+            --accent:#ffffff;
+            --red: #c90000;
+            --blue: #004d99;
+            --green: #008000;
+            --yellow: #cccc00;
+            --star: #f1c40f; 
+            --cell-bg: #222;
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body{
+            margin:0;
+            background:var(--bg);
+            color:var(--fg);
+            font-family:'Poppins',sans-serif;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:28px;
+        }
+
+        .container{
+            width:100%;
+            max-width:1200px;
+            background:var(--panel);
+            border-radius:14px;
+            padding:22px;
+            box-shadow:0 8px 30px rgba(255,255,255,0.05);
+            border:1px solid rgba(255,255,255,0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* [2] Header & Controls Styling */
+        header{
+            width: 100%;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            flex-wrap: wrap;
+        }
+        .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+        select,input,button{
+            border-radius:10px;
+            padding:10px 12px;
+            border:1px solid rgba(255,255,255,0.1);
+            background-color:#111;
+            color:var(--fg);
+            font-size:14px;
+        }
+        button.primary{background:var(--accent);color:#000;border:none;padding:10px 14px;font-weight:600;cursor:pointer;transition: transform 0.1s;}
+        button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.15);color:var(--fg);cursor:pointer;}
+        button.primary:hover{transform:translateY(-2px)}
+        .title-button{
+            font-size:24px;
+            color:var(--accent);
+            font-weight:700;
+            cursor:pointer; 
+            border: none; 
+            background: transparent;
+            transition: transform 0.2s ease;
+        }
+        .title-button:hover{
+            transform: scale(1.05);
+            text-shadow: 0 0 10px var(--accent);
+        }
+
+        /* [3] Game Area & Side Panel */
+        .game-area{
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .left-panel{
+            flex: 0 1 500px;
+            min-width: 300px;
+        }
+        .right-panel{
+            width: 250px;
+            min-width: 250px;
+            background:#111;
+            padding:14px;
+            border-radius:10px;
+            border:1px solid rgba(255,255,255,0.1)
+        }
+        .status{color:var(--muted);font-weight:600; margin-bottom: 15px; min-height: 40px;}
+        .dice-wrap{text-align: center; padding: 20px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;}
+        .dice-face{font-size: 60px; line-height: 1; margin: 10px 0; color: var(--accent); min-height: 70px;}
+        
+        /* Turn Display */
+        .turn-display-wrap {
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            transition: border-color 0.3s ease;
+            margin-bottom: 10px;
+        }
+        .turn-display-wrap.red-turn { border-color: var(--red); }
+        .turn-display-wrap.blue-turn { border-color: var(--blue); }
+        .turn-display-wrap.yellow-turn { border-color: var(--yellow); }
+        .turn-display-wrap.green-turn { border-color: var(--green); }
+        .current-player-name { font-weight: 700; font-size: 1.1em; }
+
+        /* Score List */
+        .score-list {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0 0 0;
+        }
+        .score-list li {
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.05);
+            border-left: 4px solid;
+        }
+        .score-list li.red { border-left-color: var(--red); }
+        .score-list li.blue { border-left-color: var(--blue); }
+        .score-list li.yellow { border-left-color: var(--yellow); }
+        .score-list li.green { border-left-color: var(--green); }
+        .score-list li.winner {
+            background: rgba(255,255,255,0.15);
+            font-weight: 700;
+        }
+
+        /* [4] Ludo Board Structure */
+        .board-wrap {
+            aspect-ratio: 1 / 1;
+            max-width: 500px;
+            width: 100%;
+            background: #2a2a2a;
+            border: 4px solid var(--accent);
+            border-radius: 8px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(15, 1fr);
+            grid-template-rows: repeat(15, 1fr);
+            position: relative;
+        }
+
+        .cell {
+            background: var(--cell-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+            flex-wrap: wrap; 
+            gap: 2px;
+        }
+
+        /* Home Boxes */
+        .home {
+            border: none !important;
+            display: grid;
+            place-items: center;
+            z-index: 10;
+        }
+        .red-home { grid-area: 1 / 1 / 7 / 7; background-color: var(--red); }
+        .blue-home { grid-area: 1 / 10 / 7 / 16; background-color: var(--blue); }
+        .yellow-home { grid-area: 10 / 10 / 16 / 16; background-color: var(--yellow); }
+        .green-home { grid-area: 10 / 1 / 16 / 7; background-color: var(--green); }
+
+        .home-box {
+            width: 70%;
+            height: 70%;
+            border-radius: 10px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 10%;
+            padding: 10%;
+            background: rgba(0,0,0,0.2);
+        }
+        .piece-holder {
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            display: grid;
+            place-items: center;
+        }
+
+        /* Center */
+        .center-square {
+            grid-area: 7 / 7 / 10 / 10;
+            background: #111;
+            border: 2px solid var(--accent);
+            z-index: 5;
+        }
+        .center-triangle {
+            grid-area: 7 / 7 / 10 / 10;
+            background: linear-gradient(45deg, var(--red) 25%, var(--blue) 25%, var(--blue) 50%, var(--yellow) 50%, var(--yellow) 75%, var(--green) 75%);
+            clip-path: polygon(50% 20%, 80% 50%, 50% 80%, 20% 50%);
+            z-index: 15;
+        }
+        
+        /* Path Styling */
+        .cell.red-path { background-color: rgba(193, 0, 0, 0.3); }
+        .cell.blue-path { background-color: rgba(0, 77, 153, 0.3); }
+        .cell.yellow-path { background-color: rgba(204, 204, 0, 0.3); }
+        .cell.green-path { background-color: rgba(0, 128, 0, 0.3); }
+        .cell.red-safe-row { background-color: var(--red) !important; }
+        .cell.blue-safe-row { background-color: var(--blue) !important; }
+        .cell.yellow-safe-row { background-color: var(--yellow) !important; }
+        .cell.green-safe-row { background-color: var(--green) !important; }
+        .cell.start-red { background-color: var(--red) !important; }
+        .cell.start-blue { background-color: var(--blue) !important; }
+        .cell.start-yellow { background-color: var(--yellow) !important; }
+        .cell.start-green { background-color: var(--green) !important; }
+
+        .cell.safe-zone::after {
+            content: "★";
+            color: var(--star);
+            font-size: 1.2em;
+            position: absolute;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .cell[class*="start-"]::after { content: none; }
+
+        /* Pieces */
+        .piece {
+            width: 70%;
+            height: 70%;
+            min-width: 20px;
+            min-height: 20px;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            font-weight: 700;
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+            transition: transform 0.15s ease;
+            color: var(--fg);
+            font-size: 0.7em;
+            text-shadow: 0 0 2px #000;
+            z-index: 10;
+        }
+        .piece.red { background-color: var(--red); }
+        .piece.blue { background-color: var(--blue); }
+        .piece.yellow { background-color: var(--yellow); }
+        .piece.green { background-color: var(--green); }
+        .piece:hover { transform: scale(1.1); }
+        .piece.can-move {
+            border: 3px solid var(--accent);
+            animation: glow 0.8s infinite alternate;
+            cursor: pointer;
+            z-index: 20;
+        }
+        .piece.finished {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 5px var(--accent), 0 2px 5px rgba(0,0,0,0.5); }
+            to { box-shadow: 0 0 15px var(--accent), 0 2px 5px rgba(0,0,0,0.5); }
+        }
+
+        /* Winner Modal */
+        .winner-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .winner-modal.show { display: flex; }
+        .winner-content {
+            background: var(--panel);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            border: 3px solid var(--accent);
+            animation: popIn 0.5s ease;
+        }
+        .winner-content h2 {
+            font-size: 3em;
+            margin: 0 0 20px 0;
+        }
+        .winner-content p {
+            font-size: 1.5em;
+            margin: 10px 0;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* Responsiveness */
+        @media (max-width: 800px) {
+            .container { align-items: center; }
+            .game-area { flex-direction: column; align-items: center; }
+            .left-panel { min-width: unset; width: 100%; }
+            .right-panel { width: 100%; min-width: unset; }
+            header { flex-direction: column; align-items: flex-start; }
+            .controls { justify-content: flex-start; }
+            .piece { font-size: 0.6em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button class="title-button" id="titleBtn">MeraAi Ludo</button>
+            <div class="controls">
+                <select id="mode">
+                    <option value="4p">4 Players</option>
+                    <option value="3p">3 Players</option>
+                    <option value="duo">2 Players</option>
+                    <option value="solo">Solo (vs 3 AIs)</option>
+                </select>
+                <input id="p1Name" type="text" placeholder="Red Name" value="Player 1" />
+                <input id="p2Name" type="text" placeholder="Blue Name" value="Player 2" />
+                <input id="p3Name" type="text" placeholder="Yellow Name" value="Player 3" />
+                <input id="p4Name" type="text" placeholder="Green Name" value="Player 4" />
+                <button id="start" class="primary">Start Game</button>
+                <button id="reset" class="ghost">Reset Game</button>
+            </div>
+        </header>
+
+        <section class="game-area">
+            <div class="left-panel">
+                <div class="board-wrap" id="ludoBoard"></div>
+            </div>
+
+            <aside class="right-panel">
+                <div class="status" id="status">Select mode and press Start to play</div>
+                
+                <div class="dice-wrap">
+                    <div class="turn-display-wrap" id="turnDisplayWrap">
+                        <div class="small">Current Turn:</div>
+                        <div id="turn-display" class="current-player-name"></div>
+                    </div>
+                    <div class="dice-face" id="diceFace"></div>
+                    <button id="rollDice" class="primary" disabled>Roll Dice</button>
+                </div>
+
+                <ul class="score-list" id="scoreList"></ul>
+            </aside>
+        </section>
+    </div>
+
+    <div class="winner-modal" id="winnerModal">
+        <div class="winner-content">
+            <h2>🎉 Winner! 🎉</h2>
+            <p id="winnerText"></p>
+            <button class="primary" onclick="location.reload()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const boardEl = document.getElementById('ludoBoard');
+        const statusEl = document.getElementById('status');
+        const modeEl = document.getElementById('mode');
+        const startBtn = document.getElementById('start');
+        const resetBtn = document.getElementById('reset');
+        const rollDiceBtn = document.getElementById('rollDice');
+        const diceFaceEl = document.getElementById('diceFace');
+        const turnDisplayEl = document.getElementById('turn-display');
+        const turnDisplayWrapEl = document.getElementById('turnDisplayWrap');
+        const scoreListEl = document.getElementById('scoreList');
+        const titleBtn = document.getElementById('titleBtn');
+        const winnerModal = document.getElementById('winnerModal');
+        const winnerText = document.getElementById('winnerText');
+
+        const playerInputs = {
+            red: document.getElementById('p1Name'),
+            blue: document.getElementById('p2Name'),
+            yellow: document.getElementById('p3Name'),
+            green: document.getElementById('p4Name')
+        };
+        
+        // Game State
+        let gameActive = false;
+        let activePlayers = [];
+        let currentPlayerIndex = 0;
+        let currentDiceValue = 0;
+        let waitingForMove = false;
+        let consecutiveSixes = 0;
+        
+        const playerColors = ['red', 'blue', 'yellow', 'green'];
+        const PIECES_PER_PLAYER = 4;
+        let piecePositions = {};
+        let finishedPieces = {};
+        let playerRanking = [];
+        
+        // Ludo Path Configuration
+        const PATH_COORDS = [
+            '7-2', '7-3', '7-4', '7-5', '7-6',
+            '6-7', '5-7', '4-7', '3-7', '2-7', '1-7', '1-8',
+            '1-9', '2-9', '3-9', '4-9', '5-9', '6-9',
+            '7-10', '7-11', '7-12', '7-13', '7-14',
+            '9-14', '9-13', '9-12', '9-11', '9-10',
+            '10-9', '11-9', '12-9', '13-9', '14-9', '15-9', '15-8',
+            '15-7', '14-7', '13-7', '12-7', '11-7', '10-7',
+            '9-6', '9-5', '9-4', '9-3', '9-2',
+            '9-1', '8-1', '7-1'
+        ];
+        
+        const PATH_START_INDEX = { red: 0, blue: 13, yellow: 26, green: 39 };
+        const HOME_STRETCH_START = { red: 50, blue: 11, yellow: 24, green: 37 };
+        const HOME_STRETCH_COORDS = {
+            red: ['8-2', '8-3', '8-4', '8-5', '8-6', '8-7'],
+            blue: ['2-8', '3-8', '4-8', '5-8', '6-8', '7-8'],
+            yellow: ['8-14', '8-13', '8-12', '8-11', '8-10', '8-9'],
+            green: ['14-8', '13-8', '12-8', '11-8', '10-8', '9-8']
+        };
+        const PATH_LENGTH = 52;
+        const START_CELL_COORDS = { red: '7-2', blue: '2-9', yellow: '9-14', green: '14-7' };
+        const SAFE_CELL_COORDS = ['7-2', '1-9', '9-14', '15-7', '6-7', '7-10', '10-9', '9-6'];
+
+        // YouTube Link
+        titleBtn.addEventListener('click', () => {
+            window.open('https://www.youtube.com/@MeraAi', '_blank');
+        });
+
+        function getPlayerName(color) {
+            return playerInputs[color].value.trim() || color.charAt(0).toUpperCase() + color.slice(1);
+        }
+
+        function setupPiecePositions() {
+            piecePositions = {};
+            finishedPieces = {};
+            playerColors.forEach(color => {
+                finishedPieces[color] = 0;
+                for (let i = 1; i <= PIECES_PER_PLAYER; i++) {
+                    piecePositions[`${color}-${i}`] = 'home';
+                }
+            });
+        }
+
+        function getPieceLocation(color, id) {
+            return piecePositions[`${color}-${id}`];
+        }
+
+        function isPieceMovable(color, id, dice) {
+            const pos = getPieceLocation(color, id);
+            
+            if (pos === 'finished') return false;
+            if (pos === 'home') return dice === 6;
+
+            if (pos.startsWith('path-')) {
+                const currentIndex = parseInt(pos.split('-')[1]);
+                const startIndex = PATH_START_INDEX[color];
+                const relativePos = (currentIndex - startIndex + PATH_LENGTH) % PATH_LENGTH;
+                const stretchStart = (HOME_STRETCH_START[color] - startIndex + PATH_LENGTH) % PATH_LENGTH;
+                
+                if (relativePos < stretchStart) {
+                    return relativePos + dice <= stretchStart;
+                }
+            }
+
+            if (pos.startsWith('stretch-')) {
+                const stretchPos = parseInt(pos.split('-')[1]);
+                return stretchPos + dice <= 6;
+            }
+
+            return false;
+        }
+
+        function movePiece(color, id, dice) {
+            const oldPos = getPieceLocation(color, id);
+            let newCoord = '';
+
+            if (oldPos === 'home') {
+                const startIndex = PATH_START_INDEX[color];
+                newCoord = PATH_COORDS[startIndex];
+                piecePositions[`${color}-${id}`] = `path-${startIndex}`;
+                checkCapture(color, id, newCoord);
+                updateStatus(`${getPlayerName(color)} brings piece ${id} into play!`);
+            } 
+            else if (oldPos.startsWith('path-')) {
+                const currentIndex = parseInt(oldPos.split('-')[1]);
+                const startIndex = PATH_START_INDEX[color];
+                const relativePos = (currentIndex - startIndex + PATH_LENGTH) % PATH_LENGTH;
+                const stretchStart = (HOME_STRETCH_START[color] - startIndex + PATH_LENGTH) % PATH_LENGTH;
+                
+                if (relativePos + dice === stretchStart) {
+                    piecePositions[`${color}-${id}`] = 'stretch-0';
+                    newCoord = HOME_STRETCH_COORDS[color][0];
+                    updateStatus(`${getPlayerName(color)}'s piece ${id} enters home stretch!`);
+                } 
+                else if (relativePos + dice < stretchStart) {
+                    const nextIndex = (currentIndex + dice) % PATH_LENGTH;
+                    newCoord = PATH_COORDS[nextIndex];
+                    piecePositions[`${color}-${id}`] = `path-${nextIndex}`;
+                    checkCapture(color, id, newCoord);
+                    updateStatus(`${getPlayerName(color)} moves piece ${id} forward ${dice} steps.`);
+                }
+            } 
+            else if (oldPos.startsWith('stretch-')) {
+                const stretchPos = parseInt(oldPos.split('-')[1]);
+                const newStretchPos = stretchPos + dice;
+                
+                if (newStretchPos === 6) {
+                    piecePositions[`${color}-${id}`] = 'finished';
+                    finishedPieces[color]++;
+                    updateStatus(`${getPlayerName(color)}'s piece ${id} has reached home! 🎉`);
+                    
+                    if (finishedPieces[color] === PIECES_PER_PLAYER) {
+                        playerRanking.push(color);
+                        if (playerRanking.length === activePlayers.length - 1) {
+                            endGame();
+                            return;
+                        }
+                        updateStatus(`${getPlayerName(color)} has finished all pieces! 🏆`);
+                    }
+                } else {
+                    piecePositions[`${color}-${id}`] = `stretch-${newStretchPos}`;
+                    newCoord = HOME_STRETCH_COORDS[color][newStretchPos];
+                    updateStatus(`${getPlayerName(color)} moves piece ${id} in home stretch.`);
+                }
+            }
+            
+            movePieceVisuals(color, id, newCoord);
+            clearMovableHighlights();
+            waitingForMove = false;
+            updateScoreList();
+        }
+
+        function checkCapture(color, id, coord) {
+            if (SAFE_CELL_COORDS.includes(coord)) return;
+            
+            const cellEl = document.querySelector(`.cell[data-coord="${coord}"]`);
+            if (!cellEl) return;
+            
+            const piecesOnCell = cellEl.querySelectorAll('.piece');
+            piecesOnCell.forEach(piece => {
+                const pieceColor = piece.classList[1];
+                const pieceId = parseInt(piece.dataset.id);
+                
+                if (pieceColor !== color) {
+                    piecePositions[`${pieceColor}-${pieceId}`] = 'home';
+                    const homeHolder = document.querySelector(`.home.${pieceColor}-home .piece-holder[data-id="${pieceId}"]`);
+                    if (homeHolder) homeHolder.appendChild(piece);
+                    updateStatus(`${getPlayerName(color)} captured ${getPlayerName(pieceColor)}'s piece! 💥`);
+                }
+            });
+        }
+
+        function movePieceVisuals(color, id, newCoord) {
+            const pieceEl = document.querySelector(`.piece.${color}[data-id="${id}"]`);
+            if (!pieceEl) return;
+            
+            const pos = piecePositions[`${color}-${id}`];
+            
+            if (pos === 'finished') {
+                pieceEl.classList.add('finished');
+                const centerEl = document.querySelector('.center-triangle');
+                if (centerEl) centerEl.appendChild(pieceEl);
+            } 
+            else if (newCoord) {
+                const targetCell = document.querySelector(`.cell[data-coord="${newCoord}"]`);
+                if (targetCell) {
+                    targetCell.appendChild(pieceEl);
+                }
+            }
+        }
+        
+        function highlightMovablePieces(color, dice) {
+            let foundMovable = false;
+            for (let i = 1; i <= PIECES_PER_PLAYER; i++) {
+                if (isPieceMovable(color, i, dice)) {
+                    const piece = document.querySelector(`.piece.${color}[data-id="${i}"]`);
+                    if (piece) {
+                        piece.classList.add('can-move');
+                        foundMovable = true;
+                    }
+                }
+            }
+            return foundMovable;
+        }
+        
+        function clearMovableHighlights() {
+            document.querySelectorAll('.piece.can-move').forEach(piece => {
+                piece.classList.remove('can-move');
+            });
+        }
+
+        function updateTurnDisplay() {
+            const currentColor = activePlayers[currentPlayerIndex];
+            turnDisplayEl.textContent = getPlayerName(currentColor);
+            turnDisplayWrapEl.className = 'turn-display-wrap';
+            turnDisplayWrapEl.classList.add(`${currentColor}-turn`);
+        }
+
+        function updateScoreList() {
+            scoreListEl.innerHTML = '';
+            activePlayers.forEach(color => {
+                const li = document.createElement('li');
+                li.className = color;
+                const finished = finishedPieces[color];
+                const rank = playerRanking.indexOf(color) + 1;
+                li.textContent = `${getPlayerName(color)}: ${finished}/${PIECES_PER_PLAYER} pieces`;
+                if (rank > 0) {
+                    li.textContent += ` - Rank ${rank}`;
+                    li.classList.add('winner');
+                }
+                scoreListEl.appendChild(li);
+            });
+        }
+
+        function rollDice() {
+            if (!gameActive || rollDiceBtn.disabled || waitingForMove) return;
+
+            currentDiceValue = Math.floor(Math.random() * 6) + 1;
+            diceFaceEl.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][currentDiceValue - 1];
+            
+            const currentColor = activePlayers[currentPlayerIndex];
+            updateStatus(`${getPlayerName(currentColor)} rolled a ${currentDiceValue}.`);
+            rollDiceBtn.disabled = true;
+
+            if (currentDiceValue === 6) {
+                consecutiveSixes++;
+                if (consecutiveSixes >= 3) {
+                    updateStatus(`${getPlayerName(currentColor)} rolled 3 sixes! Turn skipped.`);
+                    consecutiveSixes = 0;
+                    setTimeout(nextTurn, 2000);
+                    return;
+                }
+            }
+
+            const foundMovable = highlightMovablePieces(currentColor, currentDiceValue);
+            
+            if (foundMovable) {
+                waitingForMove = true;
+                updateStatus(`${getPlayerName(currentColor)} rolled a ${currentDiceValue}. Select a glowing piece.`);
+            } else {
+                updateStatus(`No moves available for ${getPlayerName(currentColor)}.`);
+                setTimeout(nextTurn, 1500);
+            }
+        }
+
+        function handlePieceClick(e) {
+            const pieceEl = e.target.closest('.piece');
+            if (!gameActive || !waitingForMove || !pieceEl) return;
+            
+            const pieceColor = pieceEl.classList[1];
+            const pieceId = parseInt(pieceEl.dataset.id);
+            const currentPlayerColor = activePlayers[currentPlayerIndex];
+            
+            if (pieceColor !== currentPlayerColor) {
+                updateStatus(`It's ${getPlayerName(currentPlayerColor)}'s turn!`);
+                return;
+            }
+            
+            if (pieceEl.classList.contains('can-move')) {
+                movePiece(pieceColor, pieceId, currentDiceValue);
+                
+                if (currentDiceValue === 6) {
+                    setTimeout(() => {
+                        updateStatus(`${getPlayerName(currentPlayerColor)} gets another turn!`);
+                        rollDiceBtn.disabled = false;
+                        currentDiceValue = 0;
+                        diceFaceEl.textContent = '';
+                        checkAITurn();
+                    }, 1000);
+                } else {
+                    consecutiveSixes = 0;
+                    setTimeout(nextTurn, 1000);
+                }
+            } else {
+                updateStatus(`Piece ${pieceId} cannot move. Choose a highlighted piece.`);
+            }
+        }
+
+        function aiRollDice() {
+            if (!gameActive || !isCurrentPlayerAI()) return;
+
+            currentDiceValue = Math.floor(Math.random() * 6) + 1;
+            diceFaceEl.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][currentDiceValue - 1];
+            
+            const currentColor = activePlayers[currentPlayerIndex];
+            updateStatus(`${getPlayerName(currentColor)} rolled a ${currentDiceValue}. (AI)`);
+
+            if (currentDiceValue === 6) {
+                consecutiveSixes++;
+                if (consecutiveSixes >= 3) {
+                    updateStatus(`${getPlayerName(currentColor)} rolled 3 sixes! Turn skipped.`);
+                    consecutiveSixes = 0;
+                    setTimeout(nextTurn, 2000);
+                    return;
+                }
+            }
+
+            setTimeout(() => aiMakeMove(currentColor, currentDiceValue), 1000);
+        }
+
+        function aiMakeMove(color, dice) {
+            let moved = false;
+            let bestMove = null;
+            let bestScore = -1;
+
+            // Evaluate all possible moves
+            for (let i = 1; i <= PIECES_PER_PLAYER; i++) {
+                if (isPieceMovable(color, i, dice)) {
+                    const score = evaluateMove(color, i, dice);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = i;
+                    }
+                }
+            }
+
+            if (bestMove) {
+                movePiece(color, bestMove, dice);
+                moved = true;
+            }
+
+            if (!moved) {
+                updateStatus(`${getPlayerName(color)} has no moves.`);
+            }
+
+            if (dice === 6 && moved) {
+                setTimeout(() => {
+                    updateStatus(`${getPlayerName(color)} gets another turn!`);
+                    rollDiceBtn.disabled = false;
+                    currentDiceValue = 0;
+                    diceFaceEl.textContent = '';
+                    checkAITurn();
+                }, 1500);
+            } else {
+                consecutiveSixes = 0;
+                setTimeout(nextTurn, 2000);
+            }
+        }
+
+        function evaluateMove(color, id, dice) {
+            let score = 0;
+            const pos = getPieceLocation(color, id);
+
+            // Priority 1: Finish pieces (highest priority)
+            if (pos.startsWith('stretch-')) {
+                const stretchPos = parseInt(pos.split('-')[1]);
+                if (stretchPos + dice === 6) return 1000;
+                score += 500 + stretchPos * 50;
+            }
+
+            // Priority 2: Enter home stretch
+            if (pos.startsWith('path-')) {
+                const currentIndex = parseInt(pos.split('-')[1]);
+                const startIndex = PATH_START_INDEX[color];
+                const relativePos = (currentIndex - startIndex + PATH_LENGTH) % PATH_LENGTH;
+                const stretchStart = (HOME_STRETCH_START[color] - startIndex + PATH_LENGTH) % PATH_LENGTH;
+                
+                if (relativePos + dice === stretchStart) return 800;
+                score += relativePos * 2;
+            }
+
+            // Priority 3: Capture opponent
+            if (pos.startsWith('path-')) {
+                const currentIndex = parseInt(pos.split('-')[1]);
+                const nextIndex = (currentIndex + dice) % PATH_LENGTH;
+                const nextCoord = PATH_COORDS[nextIndex];
+                
+                if (!SAFE_CELL_COORDS.includes(nextCoord)) {
+                    const cellEl = document.querySelector(`.cell[data-coord="${nextCoord}"]`);
+                    if (cellEl) {
+                        const opponentPieces = cellEl.querySelectorAll(`.piece:not(.${color})`);
+                        if (opponentPieces.length > 0) score += 300;
+                    }
+                }
+            }
+
+            // Priority 4: Bring piece out of home with 6
+            if (pos === 'home' && dice === 6) score += 200;
+
+            return score;
+        }
+
+        function isCurrentPlayerAI() {
+            return modeEl.value === 'solo' && activePlayers[currentPlayerIndex] !== 'red';
+        }
+
+        function nextTurn() {
+            clearMovableHighlights();
+            
+            do {
+                currentPlayerIndex = (currentPlayerIndex + 1) % activePlayers.length;
+            } while (finishedPieces[activePlayers[currentPlayerIndex]] === PIECES_PER_PLAYER);
+            
+            updateTurnDisplay();
+            currentDiceValue = 0;
+            diceFaceEl.textContent = '';
+            
+            checkAITurn();
+        }
+
+        function checkAITurn() {
+            if (gameActive && isCurrentPlayerAI()) {
+                rollDiceBtn.disabled = true;
+                updateStatus(`Waiting for ${getPlayerName(activePlayers[currentPlayerIndex])} to roll...`);
+                setTimeout(aiRollDice, 1500);
+            } else if (gameActive) {
+                rollDiceBtn.disabled = false;
+            }
+        }
+
+        function endGame() {
+            gameActive = false;
+            rollDiceBtn.disabled = true;
+            
+            const lastPlayer = activePlayers.find(c => !playerRanking.includes(c));
+            if (lastPlayer) playerRanking.push(lastPlayer);
+            
+            const winner = playerRanking[0];
+            winnerText.innerHTML = `
+                <strong style="color: var(--${winner}); font-size: 1.5em;">
+                    ${getPlayerName(winner)}
+                </strong> wins!<br><br>
+                Final Rankings:<br>
+                ${playerRanking.map((c, i) => `${i + 1}. ${getPlayerName(c)}`).join('<br>')}
+            `;
+            winnerModal.classList.add('show');
+        }
+
+        function updateStatus(message) {
+            statusEl.textContent = message;
+        }
+
+        function setupPlayerInputs(mode) {
+            const isSolo = mode === 'solo';
+            playerInputs.red.disabled = false;
+            playerInputs.blue.disabled = false;
+            playerInputs.yellow.disabled = false;
+            playerInputs.green.disabled = false;
+            playerInputs.yellow.style.display = 'none';
+            playerInputs.green.style.display = 'none';
+
+            if (mode === '4p' || isSolo) {
+                playerInputs.yellow.style.display = 'inline-block';
+                playerInputs.green.style.display = 'inline-block';
+                activePlayers = ['red', 'blue', 'yellow', 'green'];
+            } else if (mode === '3p') {
+                playerInputs.yellow.style.display = 'inline-block';
+                activePlayers = ['red', 'blue', 'yellow'];
+            } else if (mode === 'duo') {
+                activePlayers = ['red', 'blue'];
+            }
+            
+            if (isSolo) {
+                playerInputs.blue.value = 'Blue AI';
+                playerInputs.yellow.value = 'Yellow AI';
+                playerInputs.green.value = 'Green AI';
+                playerInputs.blue.disabled = true;
+                playerInputs.yellow.disabled = true;
+                playerInputs.green.disabled = true;
+            } else {
+                playerInputs.blue.value = 'Player 2';
+                playerInputs.yellow.value = 'Player 3';
+                playerInputs.green.value = 'Player 4';
+            }
+        }
+
+        function createPieceElement(color, id) {
+            const piece = document.createElement('div');
+            piece.className = `piece ${color}`;
+            piece.setAttribute('data-id', id);
+            piece.textContent = id;
+            piece.addEventListener('click', handlePieceClick);
+            return piece;
+        }
+
+        function generateBoardCells() {
+            boardEl.innerHTML = '';
+            
+            // Create path cells
+            for (let r = 1; r <= 15; r++) {
+                for (let c = 1; c <= 15; c++) {
+                    const isHomeArea = (r <= 6 || r >= 10) && (c <= 6 || c >= 10);
+                    const isCenterArea = r >= 7 && r <= 9 && c >= 7 && c <= 9;
+                    
+                    if (!isHomeArea && !isCenterArea) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.style.gridRow = r;
+                        cell.style.gridColumn = c;
+                        const coord = `${r}-${c}`;
+
+                        // Path coloring
+                        if (r === 7 && c <= 6) cell.classList.add('red-path');
+                        else if (r === 9 && c >= 10) cell.classList.add('yellow-path');
+                        else if (c === 7 && r >= 10) cell.classList.add('green-path');
+                        else if (c === 9 && r <= 6) cell.classList.add('blue-path');
+                        else if (r === 8 && c >= 2 && c <= 7) cell.classList.add('red-safe-row');
+                        else if (c === 8 && r >= 2 && r <= 7) cell.classList.add('blue-safe-row');
+                        else if (r === 8 && c >= 9 && c <= 14) cell.classList.add('yellow-safe-row');
+                        else if (c === 8 && r >= 9 && r <= 14) cell.classList.add('green-safe-row');
+                        
+                        if (Object.values(START_CELL_COORDS).includes(coord)) {
+                            const startColor = Object.keys(START_CELL_COORDS).find(key => START_CELL_COORDS[key] === coord);
+                            cell.classList.add(`start-${startColor}`, 'safe-zone');
+                        } else if (SAFE_CELL_COORDS.includes(coord)) {
+                            cell.classList.add('safe-zone');
+                        }
+
+                        cell.setAttribute('data-coord', coord);
+                        boardEl.appendChild(cell);
+                    }
+                }
+            }
+
+            // Add homes
+            playerColors.forEach(color => {
+                const home = document.createElement('div');
+                home.className = `home ${color}-home`;
+                const homeBox = document.createElement('div');
+                homeBox.className = 'home-box';
+                
+                for (let i = 1; i <= PIECES_PER_PLAYER; i++) {
+                    const holder = document.createElement('div');
+                    holder.className = 'piece-holder';
+                    holder.setAttribute('data-id', i);
+                    holder.appendChild(createPieceElement(color, i));
+                    homeBox.appendChild(holder);
+                }
+                
+                home.appendChild(homeBox);
+                boardEl.appendChild(home);
+            });
+
+            // Add center
+            const centerSquare = document.createElement('div');
+            centerSquare.className = 'center-square';
+            boardEl.appendChild(centerSquare);
+            
+            const centerTriangle = document.createElement('div');
+            centerTriangle.className = 'center-triangle';
+            boardEl.appendChild(centerTriangle);
+        }
+
+        function startGame() {
+            gameActive = true;
+            currentPlayerIndex = 0;
+            currentDiceValue = 0;
+            consecutiveSixes = 0;
+            playerRanking = [];
+            diceFaceEl.textContent = '';
+            winnerModal.classList.remove('show');
+            
+            setupPlayerInputs(modeEl.value);
+            setupPiecePositions();
+            generateBoardCells();
+            updateScoreList();
+            
+            updateStatus('Game Started! Roll the dice.');
+            updateTurnDisplay();
+            
+            checkAITurn();
+        }
+
+        startBtn.addEventListener('click', startGame);
+        resetBtn.addEventListener('click', () => {
+            location.reload();
+        });
+        rollDiceBtn.addEventListener('click', rollDice);
+        modeEl.addEventListener('change', (e) => setupPlayerInputs(e.target.value));
+        
+        // Initial setup
+        setupPlayerInputs(modeEl.value);
+        setupPiecePositions();
+        generateBoardCells();
+        updateScoreList();
+    </script>
+</body>
+</html>
